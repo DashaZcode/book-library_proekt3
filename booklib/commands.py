@@ -27,7 +27,8 @@ class LibraryCommands:
     def __init__(self):
         """Инициализирует объект LibraryCommands.
 
-        Создает подключение атрибут - хранилище данных.
+        Создает атрибут, который содержит в себе
+        список всех книг и доступ к вызову методов
         """
         self.storage = LibraryStorage()
 
@@ -104,7 +105,8 @@ class LibraryCommands:
             try:
                 book_num_del = int(input("Номер какой книги вы хотите удалить: ")) - 1
                 if 0 <= book_num_del < len(books_to_remove):
-                    self.storage.remove_book(books_to_remove[book_num_del].id) #находим книгу, и только затем определяем айди
+                    self.storage.remove_book(books_to_remove[book_num_del].id) #определяем номер id и вызываем метод удаление по id
+                    #self.storage.remove_book(20)
 
                     print("Книга удалена.")
             except (ValueError, IndexError):
@@ -122,7 +124,7 @@ class LibraryCommands:
             Показывает количество цитат для каждой книги.
         """
         books = self.storage.get_all_books() #вывод всех книг
-        sorted_books = BookFilter().sort_books(books, sort_by, reverse) #сортировка списка книг
+        sorted_books = BookFilter().sort_books(books, sort_by, reverse) #сортировка списка книг п оубыванию
 
         if not sorted_books:
             print("Библиотека пуста.")
@@ -244,7 +246,7 @@ class LibraryCommands:
             print("У книги нет цитат")
             return
 
-        if quote_index is None:
+        if quote_index is None: # пользователь еще не выбрал номер цитаты
             print(f"Цитаты книги '{book.title}':")
             for i, quote in enumerate(book.quotes, 1):
                 print(f"{i}. {quote}")
@@ -377,7 +379,7 @@ class LibraryCommands:
                 print("Неверный выбор")
                 return
         else:
-            book = filtered_books[0]
+            book = filtered_books[0] #если найдена одна кннига
 
         old_title, old_author = book.title, book.author
 

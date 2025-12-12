@@ -5,6 +5,7 @@ from .models import Book
 class LibraryStorage:
     def __init__(self):
         self.books = self.load_books()
+        #book_object = Book('Война и мир', 'Толстой', 1869, 'Роман')
 
     def _connect(self):
         return psycopg2.connect(
@@ -12,14 +13,15 @@ class LibraryStorage:
             user="postgres",
             password="11111",
             host="localhost",
-            port="5432"
+            port="5432",
+            client_encoding = 'utf8'
         )
-
+    #загрузка книг в таблицу книг
     def load_books(self):
         books = []
         try:
-            conn = self._connect() #подключаемься
-            cur = conn.cursor() #метод подключения - создаем курсор
+            conn = self._connect() #подключаемься создаем объект и вызваем метод
+            cur = conn.cursor() #метод подключения - создаем курсор, вызываем метод объекта conn
 
             cur.execute("SELECT id, title, author, year, genre FROM books ORDER BY id") #выборка по колонкам из таблицы книг и сортировка по возрастанию id
             books_data = cur.fetchall() #возвращает все строки результата запроса в виде списка кортежей
@@ -27,9 +29,12 @@ class LibraryStorage:
             for book_data in books_data:
                 book_id, title, author, year, genre = book_data #book_data = (1, 'Война и мир', 'Толстой', 1869, 'Роман')
 
-                cur.execute("SELECT quote FROM quotes WHERE book_id = %s", (book_id,)) #запрос цитат по айди, получает скрытое введенное значение
-                quotes_data = cur.fetchall()
-                quotes = [q[0] for q in quotes_data] #цитаты поиск
+                cur.execute("SELECT quote FROM quotes WHERE book_id = %s", (book_id,)) #находит все цитаты по айди книги, получает скрытое введенное значение
+                quotes_data = cur.fetchall() #создает кортеж
+                quotes = [q[0] for q in quotes_data]
+
+                # [(1, 'цитата1'), (2, 'цитата2')]
+                #проходится по списку и берет первый элемент (1, 'цитата1'), (2, 'цитата2'),...
 
                 book = Book(title, author, year, genre, quotes)
                 book.id = book_id #cохраняет связь между объектом Python и записью в БД
@@ -43,10 +48,10 @@ class LibraryStorage:
 
         return books
 
-    def get_all_books(self):
-        """Возвращает все книги."""
+    def get_all_books(self): #Возвращает все книги как кещ
         return self.books
 
+    #добавление книг в бд
     def add_book(self, book):
         try:
             conn = self._connect()
@@ -57,9 +62,9 @@ class LibraryStorage:
                 VALUES (%s, %s, %s, %s)
                 RETURNING id
             """, (book.title, book.author, book.year, book.genre))
-             #рбращаемься к таблице books, чтобы ввести кортеж book.title, book.author, book.year, book.genre
+             #рбращаемься к таблице books, чтобы ввести кортеж book.title, book.author, book.year, book.genre, RETURNING id - генерирует id
 
-            book_id = cur.fetchone()[0] #получаем только id
+            book_id = cur.fetchone()[0] #возвращает id книги, которую добаввили
 
             for quote in book.quotes:
                 cur.execute("""
@@ -71,14 +76,14 @@ class LibraryStorage:
             cur.close()
             conn.close()
 
-            book.id = book_id
+            book.id = book_id #присваивает объектам id
             self.books.append(book)
 
         except Exception as e:
             print(f"Ошибка добавления: {e}")
 
+    #удаление книги по шd
     def remove_book(self, book_id):
-        """Удаляет книгу по ID."""
         try:
             conn = self._connect()
             cur = conn.cursor()
@@ -94,8 +99,8 @@ class LibraryStorage:
         except Exception as e:
             print(f"Ошибка удаления: {e}")
 
+    #Добавляет цитату к книге.
     def add_quote_to_book(self, book_id, quote):
-        """Добавляет цитату к книге."""
         try:
             conn = self._connect()
             cur = conn.cursor()
@@ -110,26 +115,26 @@ class LibraryStorage:
             conn.close()
 
             for book in self.books:
-                if book.id == book_id: #Проверяем ID текущей книги равен переданному book_id?
-                    book.quotes.append(quote) #в список цитат этой книги добавляем цитату
+                if book.id == book_id: #Проверяем id текущей книги равен переданному book_id
+                    book.quotes.append(quote) #обращаемься к списку цитат объекта книги и добавляем цитату
                     break
 
         except Exception as e:
             print(f"Ошибка добавления цитаты: {e}")
 
+    # удаляем цитату по индексу
     def remove_quote(self, book_id, quote_index):
-        """Удаляет цитату по индексу."""
         try:
             conn = self._connect()
             cur = conn.cursor()
 
-            # Находим ВСЕ цитаты книги по её book_id
+            # находим все цитаты книги по её book_id
             cur.execute("SELECT id FROM quotes WHERE book_id = %s ORDER BY id", (book_id,))
-            quotes = cur.fetchall() # получаем список ВСЕХ ID цитат этой книги
+            quotes = cur.fetchall() # получаем список всех шв цитат этой книги
 
             if 0 <= quote_index < len(quotes):
-                # Берём ID конкретной цитаты по её позиции (индексу) в списке
-                quote_id = quotes[quote_index][0]
+                # берём id конкретной цитаты по её позиции индексу в списке
+                quote_id = quotes[quote_index][0] #получаем кортеж всего списка, если [i], если [i][0] то число
                 cur.execute("DELETE FROM quotes WHERE id = %s", (quote_id,)) # Удаляем цитату по её ID
                 conn.commit()
                 success = True
@@ -151,8 +156,8 @@ class LibraryStorage:
             print(f"Ошибка удаления цитаты: {e}")
             return False
 
+    #Экспортирует данные в CSV файл.
     def export_to_csv(self, filename='export.csv'):
-        """Экспортирует данные в CSV файл."""
         import csv
 
         with open(filename, 'w', newline='', encoding='utf-8') as f:
@@ -163,18 +168,18 @@ class LibraryStorage:
                 quotes_str = '|'.join(book.quotes)
                 writer.writerow([book.title, book.author, book.year, book.genre, quotes_str])
 
+    #Обновляет книгу в БД.
     def update_book(self, old_book, new_book):
-        """Обновляет книгу в БД."""
         try:
-            conn = self._connect()
-            cur = conn.cursor()
+            conn = self._connect() # создаем объект и вызваем метод
+            cur = conn.cursor()  # вызываем метод объекта conn
 
             cur.execute("""
                 UPDATE books 
                 SET title = %s, author = %s, year = %s, genre = %s
                 WHERE id = %s
             """, (new_book.title, new_book.author, new_book.year, new_book.genre, old_book.id)) #обновляем таблицу, set указывает каке поля менять и на какие значения
-
+            #обновляем запись только для этого id WHERE id = %s
             conn.commit()
             cur.close()
             conn.close()

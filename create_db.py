@@ -7,7 +7,8 @@ def create_database():
             user="postgres",
             password="11111",
             host="localhost",
-            port="5432"
+            port="5432",
+            client_encoding = 'utf8'
         )
         conn.autocommit = True #автоматического сохранения изменений.
         cur = conn.cursor()
@@ -22,7 +23,8 @@ def create_database():
             user="postgres",
             password="11111",
             host="localhost",
-            port="5432"
+            port="5432",
+            client_encoding = 'utf8'
         )
         cur = conn.cursor()
 
@@ -50,7 +52,7 @@ def create_database():
         conn.close()
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Ошибка: {e}")
 
 if __name__ == "__main__":
     create_database()
